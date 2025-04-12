@@ -1,23 +1,45 @@
 #include <EEPROM.h>
+#include <NimBLEDevice.h>  // Usamos NimBLE
 
-// Pins
-const int ledRojo = 27;       // Red LED – "Not time yet"
-const int ledAmarillo = 26;   // Yellow LED – "Time to take"
-const int ledVerde = 25;      // Green LED – "Confirmed"
+// Pines
+const int ledRojo = 27;
+const int ledAmarillo = 26;
+const int ledVerde = 25;
 const int buzzer = 32;
-const int boton = 33;         // Button input
+const int boton = 33;
 
-// Buzzer PWM settings
+// Configuración del buzzer PWM
 #define BUZZER_CHANNEL 0
 #define BUZZER_FREQUENCY 2000
 #define BUZZER_RESOLUTION 8
 
-// States
+// UUIDs de BLE
+#define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
+#define CHARACTERISTIC_UUID "abcd1234-ab12-cd34-ef56-abcdef123456"
+
+NimBLECharacteristic *pCharacteristic;
+bool bleConnected = false;
+
+// Estados
 bool alertaActiva = false;
 bool confirmacionHecha = false;
 
 unsigned long tiempoInicio;
-const unsigned long tiempoAlerta = 10000; // Alert after 10 seconds
+const unsigned long tiempoAlerta = 10000; // 10 segundos
+unsigned long ultimaNotificacion = 0;     // Para reenviar por BLE
+
+// Callbacks BLE para conexión
+class MyServerCallbacks : public NimBLEServerCallbacks {
+  void onConnect(NimBLEServer* pServer) override {
+    bleConnected = true;
+    Serial.println("📶 BLE device connected");
+  }
+
+  void onDisconnect(NimBLEServer* pServer) override {
+    bleConnected = false;
+    Serial.println("📴 BLE device disconnected");
+  }
+};
 
 void setup() {
   Serial.begin(115200);
@@ -25,20 +47,35 @@ void setup() {
   pinMode(ledRojo, OUTPUT);
   pinMode(ledAmarillo, OUTPUT);
   pinMode(ledVerde, OUTPUT);
-  pinMode(boton, INPUT_PULLUP); // Button connected to GND
+  pinMode(boton, INPUT_PULLUP);
 
-  // Setup buzzer PWM
   ledcSetup(BUZZER_CHANNEL, BUZZER_FREQUENCY, BUZZER_RESOLUTION);
   ledcAttachPin(buzzer, BUZZER_CHANNEL);
-  ledcWriteTone(BUZZER_CHANNEL, 0); // Start silent
+  ledcWriteTone(BUZZER_CHANNEL, 0);
 
-  // Initial state: medication not yet due
-  digitalWrite(ledRojo, HIGH);      // Red LED ON at start
+  digitalWrite(ledRojo, HIGH);
   digitalWrite(ledAmarillo, LOW);
   digitalWrite(ledVerde, LOW);
 
   EEPROM.begin(512);
   tiempoInicio = millis();
+
+  // BLE con NimBLE
+  NimBLEDevice::init("DoseMate");
+  NimBLEServer *pServer = NimBLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  NimBLEService *pService = pServer->createService(SERVICE_UUID);
+  pCharacteristic = pService->createCharacteristic(
+                      CHARACTERISTIC_UUID,
+                      NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
+                    );
+  pCharacteristic->setValue("🔋 Ready");
+  pService->start();
+
+  NimBLEAdvertising *pAdvertising = NimBLEDevice::getAdvertising();
+  pAdvertising->start();
+  Serial.println("📡 BLE advertising started");
 
   Serial.println("🟢 System initialized. Waiting for medication time...");
 }
@@ -46,31 +83,42 @@ void setup() {
 void loop() {
   unsigned long ahora = millis();
 
-  // Time to take medication
-  if (!alertaActiva && ahora - tiempoInicio >= tiempoAlerta) {
+  if (!alertaActiva && !confirmacionHecha && (ahora - tiempoInicio >= tiempoAlerta)) {
     alertaActiva = true;
-
-    digitalWrite(ledRojo, LOW);       // Turn off red LED
-    digitalWrite(ledAmarillo, HIGH);  // Turn on yellow LED
-
-    // Activate buzzer using tone
+    ultimaNotificacion = 0; // Forzar notificación inmediata
+    digitalWrite(ledRojo, LOW);
+    digitalWrite(ledAmarillo, HIGH);
     ledcWriteTone(BUZZER_CHANNEL, BUZZER_FREQUENCY);
-
     Serial.println("🔔 Time to take your medication!");
   }
 
-  // Button pressed to confirm
-  if (alertaActiva && !confirmacionHecha && digitalRead(boton) == LOW) {
-    delay(200); // debounce
-    confirmacionHecha = true;
+  if (alertaActiva && !confirmacionHecha) {
+    // Enviar notificación cada 5s si aún no se ha confirmado
+    if (bleConnected && (ahora - ultimaNotificacion >= 5000)) {
+      pCharacteristic->setValue("⏰ Time to take your medication!");
+      pCharacteristic->notify();
+      Serial.println("📲 BLE notification sent.");
+      ultimaNotificacion = ahora;
+    }
 
-    digitalWrite(ledAmarillo, LOW);     // Turn off yellow LED
-    ledcWriteTone(BUZZER_CHANNEL, 0);   // Turn off buzzer
-    digitalWrite(ledVerde, HIGH);       // Turn on green LED
+    // Confirmación por botón
+    if (digitalRead(boton) == LOW) {
+      delay(200);
+      confirmacionHecha = true;
 
-    EEPROM.put(0, 1);
-    EEPROM.commit();
+      digitalWrite(ledAmarillo, LOW);
+      ledcWriteTone(BUZZER_CHANNEL, 0);
+      digitalWrite(ledVerde, HIGH);
 
-    Serial.println("✅ Medication confirmed.");
+      EEPROM.put(0, 1);
+      EEPROM.commit();
+
+      Serial.println("✅ Medication confirmed.");
+
+      if (bleConnected) {
+        pCharacteristic->setValue("✅ Medication confirmed");
+        pCharacteristic->notify();
+      }
+    }
   }
 }
