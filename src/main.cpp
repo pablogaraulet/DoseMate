@@ -2,8 +2,9 @@
 #include <NimBLEDevice.h>
 #include <WiFi.h>
 #include <HttpClient.h>
+#include <time.h>
 
-// Pines
+// Pins
 const int ledRojo = 27;
 const int ledAmarillo = 26;
 const int ledVerde = 25;
@@ -11,10 +12,11 @@ const int buzzer = 32;
 const int boton = 33;
 
 // WiFi
-const char* ssid = "iPhone";
-const char* password = "pablo2003";
+const char* ssid = "BLVD63";
+const char* password = "sdBLVD63";
 const char* server = "18.223.170.211";  // AWS IP
 const int port = 5000;
+const char* device_id = "ttgo01";       // Optional: unique identifier
 
 // Buzzer PWM
 #define BUZZER_CHANNEL 0
@@ -34,7 +36,7 @@ unsigned long tiempoInicio;
 const unsigned long tiempoAlerta = 10000;
 unsigned long ultimaNotificacion = 0;
 
-// BLE callbacks
+// BLE Callbacks
 class MyServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* pServer) {
     bleConnected = true;
@@ -50,7 +52,6 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
 void conectarWiFi() {
   Serial.println("🌐 Connecting to WiFi...");
   WiFi.begin(ssid, password);
-
   int maxIntentos = 60;
   while (WiFi.status() != WL_CONNECTED && maxIntentos-- > 0) {
     delay(500);
@@ -61,10 +62,20 @@ void conectarWiFi() {
     Serial.println("\n✅ WiFi connected");
     Serial.print("📡 IP: ");
     Serial.println(WiFi.localIP());
+
+    // NTP Time sync
+    configTime(0, 0, "pool.ntp.org"); // UTC
+    struct tm timeinfo;
+    Serial.println("🕒 Waiting for NTP sync...");
+    while (!getLocalTime(&timeinfo)) {
+      Serial.println("❌ Failed to get time, retrying...");
+      delay(1000);
+    }
+    Serial.println("✅ Time synchronized");
   } else {
     Serial.println("\n⚠️ WiFi connection failed. Retrying...");
     delay(2000);
-    conectarWiFi();  // Intenta nuevamente
+    conectarWiFi();
   }
 }
 
@@ -87,9 +98,8 @@ void setup() {
   EEPROM.begin(512);
   tiempoInicio = millis();
 
-  conectarWiFi(); // 🌐
+  conectarWiFi();
 
-  // BLE
   NimBLEDevice::init("DoseMate");
   NimBLEServer* pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -145,10 +155,16 @@ void loop() {
         pCharacteristic->notify();
       }
 
-      // 🌍 HTTP Notificación a AWS
+      // 🌍 HTTP request to Flask backend
       WiFiClient wifi;
       HttpClient client(wifi);
-      String path = "/?var=✅+Medication+confirmed";
+
+      char timeString[30];
+      time_t now = time(nullptr);
+      strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
+
+      String path = "/medication?device_id=" + String(device_id) +
+                    "&status=confirmed&timestamp=" + String(timeString);
 
       int err = client.get(server, port, path.c_str());
       if (err == 0) {
