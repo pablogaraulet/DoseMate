@@ -8,14 +8,9 @@
 </head>
 <body>
 
-  <header>
-    <h1>DoseMate</h1>
-    <nav>
-      <a href="{{ url_for('home') }}">Home</a>
-      <a href="{{ url_for('dashboard') }}">Dashboard</a>
-      <a href="{{ url_for('about') }}">About</a>
-    </nav>
-  </header>
+  {% include "header.html" %}
+
+  
 
   <main>
     <h2>📋 Medication Logs</h2>
@@ -43,12 +38,6 @@
   </main>
 
   <footer>
-    <p>Follow DoseMate:</p>
-    <div class="socials">
-      <a href="https://twitter.com" target="_blank">🐦</a>
-      <a href="https://instagram.com" target="_blank">📸</a>
-      <a href="https://facebook.com" target="_blank">📘</a>
-    </div>
     <p>&copy; 2025 DoseMate. All rights reserved.</p>
   </footer>
 

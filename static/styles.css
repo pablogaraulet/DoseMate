@@ -2,12 +2,12 @@ body {
   font-family: 'Poppins', sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #f6f8f9;
+  background-color: #ffffff;  /* Fondo blanco */
   color: #333;
 }
 
 header {
-  background-color: #4CAF50;
+  background-color: #add8e6;  /* Azul claro */
   padding: 10px 20px;
   color: white;
   display: flex;
@@ -15,11 +15,7 @@ header {
   justify-content: space-between;
 }
 
-header h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
+/* Resto de estilos sin cambios */
 nav a {
   color: white;
   text-decoration: none;
@@ -29,6 +25,17 @@ nav a {
 
 main {
   padding: 40px;
+  text-align: center;  /* Centra el contenido de main */
+}
+
+main h2 {
+  font-size: 48px;  /* Título grande para Welcome */
+  margin-bottom: 20px;
+}
+
+main p {
+  font-size: 18px;  /* Texto descriptivo más pequeño */
+  margin-bottom: 20px;
 }
 
 footer {
@@ -58,4 +65,159 @@ th, td {
 
 th {
   background-color: #f1f1f1;
+}
+
+@keyframes fadeIn {
+  from {
+      opacity: 0;
+      transform: translateY(20px);
+  }
+  to {
+      opacity: 1;
+      transform: translateY(0);
+  }
+}
+
+.fade-in {
+  opacity: 0;
+  animation: fadeIn 1.5s ease-out forwards;
+}
+
+/* INDEX PAGE*/
+.hidden {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Sección inicial con background visible solo al cargar la página */
+.hero-bg {
+  background: url('{{ url_for("static", filename="https://media.istockphoto.com/id/184377448/es/foto/medicamentos-comprimidos.jpg?s=612x612&w=0&k=20&c=12SmngVfVedu_V5XUmtirtVDML_Z4dS-hASEynzWcW8=") }}') no-repeat center center;
+  background-size: cover;
+  height: 100vh;  /* Ocupa el 100% del viewport */
+}
+
+
+/* Contact Page */
+.contact-container {
+  text-align: left;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.contact-container h5 {
+  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+  color: #c9d1d9;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.contact-container h2 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 6px;
+  text-transform: none;
+  font-family: 'Poppins', sans-serif;
+}
+
+.underline {
+  display: block;
+  width: 145px;
+  height: 2px;
+  background-color: #3ec1ec;
+  margin: 0.2em auto 40px auto;
+  border-radius: 2px;
+}
+
+.contact-container h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: left;
+  color: gray;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Formulario de contacto */
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.input-row {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  justify-content: space-between;
+}
+
+.form-field label {
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+  color: #a0a0a0;
+}
+
+.form-field input,
+.form-field textarea {
+  width: 100%;
+  padding: 10px;
+  background-color: transparent;
+  border: none;
+  border-bottom: 1px solid #6c757d;
+  color: rgb(48, 46, 46);
+  font-size: 0.95rem;
+}
+
+.form-field input::placeholder,
+.form-field textarea::placeholder {
+  color: #7a848e;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-bottom-color: #3ec1ec;
+}
+
+/* Botón de envío */
+.btn-container {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.button-cv {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #3ec1ec;
+  color: #ffffff;
+  border: none;
+  border-radius: 9999px; /* Forma de píldora */
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.3s ease, background-color 0.3s ease;
+  text-decoration: none;
+}
+
+.button-cv:hover {
+  background-color: tomato;
+  transform: scale(1.05);
+}
+
+.arrow {
+  font-size: 1.1rem;
+  transform: translateY(-2px);
 }
