@@ -19,6 +19,17 @@ def init_db():
             timestamp TEXT NOT NULL
         )
     ''')
+    # Nueva tabla para logs ambientales
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS environment_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            device_id TEXT NOT NULL,
+            temperature REAL,
+            humidity REAL,
+            status TEXT,
+            timestamp TEXT
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -38,6 +49,25 @@ def receive_medication():
 
     print(f"[LOG] Device {device_id} reported status '{status}' at {timestamp}")
     return f"Received status '{status}' from device {device_id}"
+
+# --- Route to receive environmental data ---
+@app.route("/envlog")
+def receive_environment():
+    device_id = request.args.get("device_id", "unknown")
+    temperature = request.args.get("temperature")
+    humidity = request.args.get("humidity")
+    status = request.args.get("status", "unknown")
+    timestamp = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
+
+    conn = sqlite3.connect('medication.db')
+    c = conn.cursor()
+    c.execute("INSERT INTO environment_logs (device_id, temperature, humidity, status, timestamp) VALUES (?, ?, ?, ?, ?)",
+              (device_id, temperature, humidity, status, timestamp))
+    conn.commit()
+    conn.close()
+
+    print(f"[ENV] Device {device_id} reported {temperature}°C / {humidity}% → {status} at {timestamp}")
+    return f"Logged environmental data from {device_id}"
 
 # --- Route to render the dashboard using template ---
 @app.route("/dashboard")
