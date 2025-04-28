@@ -102,3 +102,53 @@ nano about.html
 cd /home/ubuntu
 nano server.py
 python3 server.py
+nano server.py
+git init 
+git remote add origin https://github.com/pablogaraulet/DoseMate.git
+git branch -M main
+git add .
+git commit -m "Initial upload from EC2"
+git push -u origin main
+nano server.py
+git push -u origin main
+git pull origin main --allow-unrelated-histories
+git pull origin main --allow-unrelated-histories --no-rebase
+cat src/main.cpp
+git add .
+git commit -m "Initial upload from EC2"
+git push origin main
+python3 server.py
+ls
+python3 server.p
+cd templates
+cd ..
+cd C:\Users\MSI\Documents\PlatformIO\Projects\DoseMate
+cd "/c/Users/MSI/Documents/PlatformIO/Projects/DoseMate"
+exit
+cd templates
+nano index.html
+cd ..
+git pull origin main
+cd templates
+nano index.html
+cd ..
+python3 server.p
+cd /home/ubuntu
+python3 server.p
+ls
+py server.py
+python3 server.p
+python3 server.py
+ls
+nano medication.db
+python3 server.py
+nano server.py
+exit
+nano server.py
+nano dashboard.html
+cd templates
+nano dashboard.html
+python3 server.py
+cd ..
+python3 server.py
+exit
