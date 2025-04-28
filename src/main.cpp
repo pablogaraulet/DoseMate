@@ -5,6 +5,7 @@
 #include <HttpClient.h>
 #include <time.h>
 #include <Adafruit_AHTX0.h>
+#include <TFT_eSPI.h>
 
 // Pins
 const int ledRed = 27;
@@ -16,19 +17,15 @@ const int button = 33;
 // WiFi
 const char* ssid = "BLVD63";
 const char* password = "sdBLVD63";
-const char* server = "18.223.170.211";
+const char* server = "3.144.105.179";
 const int port = 5000;
 const char* device_id = "ttgo01";
-
-// Buzzer PWM
-#define BUZZER_CHANNEL 0
-#define BUZZER_FREQUENCY 2000
-#define BUZZER_RESOLUTION 8
 
 // BLE UUIDs
 #define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
 #define CHARACTERISTIC_UUID "abcd1234-ab12-cd34-ef56-abcdef123456"
 
+// BLE, Flags
 NimBLECharacteristic* pCharacteristic;
 bool bleConnected = false;
 bool alertActive = false;
@@ -37,9 +34,25 @@ bool confirmationDone = false;
 unsigned long startTime;
 const unsigned long alertDelay = 10000;
 unsigned long lastNotification = 0;
+unsigned long lastBlink = 0;
+bool blinkState = false;
 
 // Sensor
 Adafruit_AHTX0 aht;
+
+// TFT Display
+TFT_eSPI tft = TFT_eSPI();
+
+// Centered Message
+void showMessage(const String& text, uint16_t color = TFT_WHITE, uint8_t size = 2) {
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(color, TFT_BLACK);
+  tft.setTextSize(size);
+  int x = (tft.width() - text.length() * 6 * size) / 2;
+  int y = (tft.height() - 8 * size) / 2;
+  tft.setCursor(x, y);
+  tft.println(text);
+}
 
 class MyServerCallbacks : public NimBLEServerCallbacks {
   void onConnect(NimBLEServer* pServer) { bleConnected = true; Serial.println("📶 BLE device connected"); }
@@ -49,11 +62,9 @@ class MyServerCallbacks : public NimBLEServerCallbacks {
 void connectWiFi() {
   Serial.println("🌐 Connecting to WiFi...");
   WiFi.begin(ssid, password);
-  int maxTries = 60;
-  while (WiFi.status() != WL_CONNECTED && maxTries-- > 0) {
-    delay(500);
-    Serial.print(".");
-  }
+  int tries = 60;
+  while (WiFi.status() != WL_CONNECTED && tries-- > 0) { delay(500); Serial.print("."); }
+
   if (WiFi.status() == WL_CONNECTED) {
     Serial.println("\n✅ WiFi connected");
     Serial.print("📡 IP: ");
@@ -61,13 +72,10 @@ void connectWiFi() {
     configTime(0, 0, "pool.ntp.org");
     struct tm timeinfo;
     Serial.println("🕒 Waiting for NTP sync...");
-    while (!getLocalTime(&timeinfo)) {
-      Serial.println("❌ Failed to get time, retrying...");
-      delay(1000);
-    }
+    while (!getLocalTime(&timeinfo)) { Serial.println("❌ Failed to sync time..."); delay(1000); }
     Serial.println("✅ Time synchronized");
   } else {
-    Serial.println("\n⚠️ WiFi connection failed. Retrying...");
+    Serial.println("\n⚠️ WiFi Failed. Retrying...");
     delay(2000);
     connectWiFi();
   }
@@ -82,26 +90,21 @@ String evaluateEnvironment(float temp, float hum) {
 void sendEnvironmentLog(float temp, float hum, String status) {
   WiFiClient wifi;
   HttpClient client(wifi);
+
   char timeString[30];
   time_t now = time(nullptr);
   strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
 
-  String path = "/envlog?device_id=" + String(device_id) +
-                "&temperature=" + String(temp, 1) +
-                "&humidity=" + String(hum, 1) +
-                "&status=" + status +
-                "&timestamp=" + String(timeString);
+  String path = "/envlog?device_id=" + String(device_id) + "&temperature=" + String(temp,1) + "&humidity=" + String(hum,1) + "&status=" + status + "&timestamp=" + timeString;
 
-  Serial.println("🌡️ Sending environmental data...");
+  Serial.println("📡 Uploading data...");
+  showMessage("📡 Uploading...", TFT_CYAN, 1);
   int err = client.get(server, port, path.c_str());
 
   if (err == 0) {
-    Serial.print("🌐 HTTP response: ");
-    while (client.available()) { Serial.print(client.read()); }
-    Serial.println();
+    Serial.println("🌐 Upload OK");
   } else {
-    Serial.print("❌ HTTP error: ");
-    Serial.println(err);
+    Serial.println("❌ Upload Error");
   }
   client.stop();
 }
@@ -114,9 +117,9 @@ void setup() {
   pinMode(ledGreen, OUTPUT);
   pinMode(button, INPUT_PULLUP);
 
-  ledcSetup(BUZZER_CHANNEL, BUZZER_FREQUENCY, BUZZER_RESOLUTION);
-  ledcAttachPin(buzzer, BUZZER_CHANNEL);
-  ledcWriteTone(BUZZER_CHANNEL, 0);
+  ledcSetup(0, 2000, 8);
+  ledcAttachPin(buzzer, 0);
+  ledcWriteTone(0, 0);
 
   digitalWrite(ledRed, HIGH);
   digitalWrite(ledYellow, LOW);
@@ -127,25 +130,23 @@ void setup() {
 
   connectWiFi();
 
-  Wire.begin(21, 22);  // SDA, SCL
-  delay(200); // Stabilize
+  Wire.begin(21, 22);
+  delay(200);
 
-  // Retry initialization
-  bool sensor_ok = false;
+  tft.init();
+  tft.setRotation(1);
+  showMessage("DoseMate Ready!", TFT_GREEN, 3);
+
+  bool sensorOK = false;
   for (int i = 0; i < 5; i++) {
-    if (aht.begin(&Wire)) {
-      sensor_ok = true;
-      break;
-    }
-    Serial.println("⏳ Retrying sensor initialization...");
+    if (aht.begin(&Wire)) { sensorOK = true; break; }
     delay(500);
   }
 
-  if (!sensor_ok) {
-    Serial.println("❌ Sensor AHT20/DHT20 not detected.");
+  if (!sensorOK) {
+    showMessage("⚠️ Sensor Error!", TFT_RED, 2);
     while (1) delay(10);
   }
-  Serial.println("✅ Sensor AHT20 successfully initialized.");
 
   NimBLEDevice::init("DoseMate");
   NimBLEServer* pServer = NimBLEDevice::createServer();
@@ -156,28 +157,37 @@ void setup() {
   pCharacteristic->setValue("🔋 Ready");
   pService->start();
   NimBLEDevice::getAdvertising()->start();
-
-  Serial.println("🟢 System initialized. Waiting...");
 }
 
 void loop() {
   unsigned long now = millis();
 
-  if (!alertActive && !confirmationDone && (now - startTime >= alertDelay)) {
+  if (!alertActive && !confirmationDone && now - startTime >= alertDelay) {
     alertActive = true;
     lastNotification = 0;
     digitalWrite(ledRed, LOW);
     digitalWrite(ledYellow, HIGH);
-    ledcWriteTone(BUZZER_CHANNEL, BUZZER_FREQUENCY);
-    Serial.println("🔔 Time to take your medication!");
+    ledcWriteTone(0, 2000);
+  }
+
+  if (!alertActive && !confirmationDone) {
+    showMessage("Waiting...", TFT_WHITE, 1);
   }
 
   if (alertActive && !confirmationDone) {
-    if (bleConnected && (now - lastNotification >= 5000)) {
+    if (now - lastBlink >= 500) {
+      blinkState = !blinkState;
+      if (blinkState)
+        showMessage("💊 Time for Meds!", TFT_YELLOW, 3);
+      else
+        showMessage("", TFT_BLACK, 1);
+      lastBlink = now;
+    }
+
+    if (bleConnected && now - lastNotification >= 5000) {
       pCharacteristic->setValue("⏰ Time to take your medication!");
       pCharacteristic->notify();
       lastNotification = now;
-      Serial.println("📲 BLE notification sent.");
     }
 
     if (digitalRead(button) == LOW) {
@@ -185,57 +195,25 @@ void loop() {
       confirmationDone = true;
       digitalWrite(ledYellow, LOW);
       digitalWrite(ledGreen, HIGH);
-      ledcWriteTone(BUZZER_CHANNEL, 0);
+      ledcWriteTone(0, 0);
 
       EEPROM.put(0, 1);
       EEPROM.commit();
-      Serial.println("✅ Medication confirmed.");
+
+      showMessage("✅ Meds Taken!", TFT_GREEN, 3);
+      delay(1500);
+      showMessage("Well done!", TFT_GREEN, 2);
 
       if (bleConnected) {
         pCharacteristic->setValue("✅ Medication confirmed");
         pCharacteristic->notify();
       }
 
-      WiFiClient wifi;
-      HttpClient client(wifi);
-      char timeString[30];
-      time_t now = time(nullptr);
-      strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
-
-      String path = "/medication?device_id=" + String(device_id) +
-                    "&status=confirmed&timestamp=" + String(timeString);
-
-      int err = client.get(server, port, path.c_str());
-      if (err == 0) {
-        Serial.print("🌐 HTTP response: ");
-        while (client.available()) { Serial.print(client.read()); }
-        Serial.println();
-      } else {
-        Serial.print("❌ HTTP error: ");
-        Serial.println(err);
-      }
-      client.stop();
-
-      // Read sensor
       sensors_event_t humidity, temp;
       aht.getEvent(&humidity, &temp);
 
-      float t = temp.temperature;
-      float h = humidity.relative_humidity;
-
-      if (!isnan(t) && !isnan(h)) {
-        String envStatus = evaluateEnvironment(t, h);
-        Serial.printf("📊 Environment: %.1f°C | %.1f%% RH → %s\n", t, h, envStatus.c_str());
-
-        if (bleConnected) {
-          String msg = "🌡️ " + String(t,1) + "°C | 💧 " + String(h,1) + "% → " + envStatus;
-          pCharacteristic->setValue(msg.c_str());
-          pCharacteristic->notify();
-        }
-
-        sendEnvironmentLog(t, h, envStatus);
-      } else {
-        Serial.println("❌ Sensor read error.");
+      if (!isnan(temp.temperature) && !isnan(humidity.relative_humidity)) {
+        sendEnvironmentLog(temp.temperature, humidity.relative_humidity, evaluateEnvironment(temp.temperature, humidity.relative_humidity));
       }
     }
   }
