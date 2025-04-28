@@ -25,7 +25,6 @@ const char* device_id = "ttgo01";
 #define SERVICE_UUID        "12345678-1234-1234-1234-1234567890ab"
 #define CHARACTERISTIC_UUID "abcd1234-ab12-cd34-ef56-abcdef123456"
 
-// BLE, Flags
 NimBLECharacteristic* pCharacteristic;
 bool bleConnected = false;
 bool alertActive = false;
@@ -37,45 +36,56 @@ unsigned long lastNotification = 0;
 unsigned long lastBlink = 0;
 bool blinkState = false;
 
-// Sensor
 Adafruit_AHTX0 aht;
-
-// TFT Display
 TFT_eSPI tft = TFT_eSPI();
 
-// Centered Message
-void showMessage(const String& text, uint16_t color = TFT_WHITE, uint8_t size = 2) {
+void fadeScreen() {
   tft.fillScreen(TFT_BLACK);
+}
+
+void showMessage(const String& text, uint16_t color = TFT_WHITE, uint8_t size = 2) {
+  fadeScreen();
   tft.setTextColor(color, TFT_BLACK);
   tft.setTextSize(size);
-  int x = (tft.width() - text.length() * 6 * size) / 2;
-  int y = (tft.height() - 8 * size) / 2;
+
+  int textWidth = text.length() * 6 * size;
+  int textHeight = 8 * size;
+
+  int x = (tft.width() - textWidth) / 2;
+  int y = (tft.height() - textHeight) / 2;
+
   tft.setCursor(x, y);
   tft.println(text);
 }
 
+void showTemporaryMessage(const String& text, uint16_t color, uint8_t size, unsigned long duration) {
+  showMessage(text, color, size);
+  delay(duration);
+  tft.fillScreen(TFT_BLACK);
+}
+
 class MyServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer* pServer) { bleConnected = true; Serial.println("📶 BLE device connected"); }
-  void onDisconnect(NimBLEServer* pServer) { bleConnected = false; Serial.println("📴 BLE device disconnected"); }
+  void onConnect(NimBLEServer* pServer) { bleConnected = true; Serial.println("BLE device connected"); }
+  void onDisconnect(NimBLEServer* pServer) { bleConnected = false; Serial.println("BLE device disconnected"); }
 };
 
 void connectWiFi() {
-  Serial.println("🌐 Connecting to WiFi...");
+  Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
   int tries = 60;
   while (WiFi.status() != WL_CONNECTED && tries-- > 0) { delay(500); Serial.print("."); }
 
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\n✅ WiFi connected");
-    Serial.print("📡 IP: ");
+    Serial.println("\nWiFi connected");
+    Serial.print("IP: ");
     Serial.println(WiFi.localIP());
     configTime(0, 0, "pool.ntp.org");
     struct tm timeinfo;
-    Serial.println("🕒 Waiting for NTP sync...");
-    while (!getLocalTime(&timeinfo)) { Serial.println("❌ Failed to sync time..."); delay(1000); }
-    Serial.println("✅ Time synchronized");
+    Serial.println("Waiting for NTP sync...");
+    while (!getLocalTime(&timeinfo)) { Serial.println("Failed to sync time..."); delay(1000); }
+    Serial.println("Time synchronized");
   } else {
-    Serial.println("\n⚠️ WiFi Failed. Retrying...");
+    Serial.println("\nWiFi Failed. Retrying...");
     delay(2000);
     connectWiFi();
   }
@@ -90,22 +100,18 @@ String evaluateEnvironment(float temp, float hum) {
 void sendEnvironmentLog(float temp, float hum, String status) {
   WiFiClient wifi;
   HttpClient client(wifi);
-
   char timeString[30];
   time_t now = time(nullptr);
   strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", gmtime(&now));
 
   String path = "/envlog?device_id=" + String(device_id) + "&temperature=" + String(temp,1) + "&humidity=" + String(hum,1) + "&status=" + status + "&timestamp=" + timeString;
 
-  Serial.println("📡 Uploading data...");
-  showMessage("📡 Uploading...", TFT_CYAN, 1);
+  Serial.println("Uploading data...");
+  showTemporaryMessage("Uploading...", TFT_CYAN, 2, 1000);
   int err = client.get(server, port, path.c_str());
 
-  if (err == 0) {
-    Serial.println("🌐 Upload OK");
-  } else {
-    Serial.println("❌ Upload Error");
-  }
+  if (err == 0) Serial.println("Upload OK");
+  else Serial.println("Upload Error");
   client.stop();
 }
 
@@ -144,7 +150,7 @@ void setup() {
   }
 
   if (!sensorOK) {
-    showMessage("⚠️ Sensor Error!", TFT_RED, 2);
+    showMessage("Sensor Error!", TFT_RED, 2);
     while (1) delay(10);
   }
 
@@ -154,7 +160,7 @@ void setup() {
 
   NimBLEService* pService = pServer->createService(SERVICE_UUID);
   pCharacteristic = pService->createCharacteristic(CHARACTERISTIC_UUID, NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY);
-  pCharacteristic->setValue("🔋 Ready");
+  pCharacteristic->setValue("Ready");
   pService->start();
   NimBLEDevice::getAdvertising()->start();
 }
@@ -171,21 +177,21 @@ void loop() {
   }
 
   if (!alertActive && !confirmationDone) {
-    showMessage("Waiting...", TFT_WHITE, 1);
+    showMessage("Waiting...", TFT_WHITE, 2);
   }
 
   if (alertActive && !confirmationDone) {
-    if (now - lastBlink >= 500) {
+    if (now - lastBlink >= 600) {
       blinkState = !blinkState;
       if (blinkState)
-        showMessage("💊 Time for Meds!", TFT_YELLOW, 3);
+        showMessage("Meds Time!", TFT_YELLOW, 2);
       else
-        showMessage("", TFT_BLACK, 1);
+        showMessage("", TFT_BLACK, 2);
       lastBlink = now;
     }
 
     if (bleConnected && now - lastNotification >= 5000) {
-      pCharacteristic->setValue("⏰ Time to take your medication!");
+      pCharacteristic->setValue("Time to take your medication!");
       pCharacteristic->notify();
       lastNotification = now;
     }
@@ -200,12 +206,11 @@ void loop() {
       EEPROM.put(0, 1);
       EEPROM.commit();
 
-      showMessage("✅ Meds Taken!", TFT_GREEN, 3);
-      delay(1500);
-      showMessage("Well done!", TFT_GREEN, 2);
+      showTemporaryMessage("Meds Taken!", TFT_GREEN, 2, 1500);
+      showTemporaryMessage("Well done!", TFT_GREEN, 2, 2000);
 
       if (bleConnected) {
-        pCharacteristic->setValue("✅ Medication confirmed");
+        pCharacteristic->setValue("Medication confirmed");
         pCharacteristic->notify();
       }
 
