@@ -196,19 +196,11 @@ def edit_profile():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    # Abrir la conexión y configurar row_factory para tuplas tipo dict
     conn = sqlite3.connect('medication.db')
     conn.row_factory = sqlite3.Row
     c = conn.cursor()
     c.execute("""
-        SELECT
-            id,
-            device_id,
-            type,
-            temperature,
-            humidity,
-            status,
-            timestamp
+        SELECT id, device_id, type, temperature, humidity, status, timestamp
         FROM medication_logs
         ORDER BY timestamp DESC
     """)
@@ -221,14 +213,19 @@ def dashboard():
 def stats():
     conn = sqlite3.connect('medication.db')
     c = conn.cursor()
+
     c.execute("SELECT COUNT(*) FROM medication_logs")
     total_records = c.fetchone()[0]
+
     c.execute("SELECT COUNT(DISTINCT device_id) FROM medication_logs")
     unique_devices = c.fetchone()[0]
+
     c.execute("SELECT AVG(temperature) FROM medication_logs WHERE type='environment'")
     avg_temperature = c.fetchone()[0] or 0
+
     c.execute("SELECT AVG(humidity) FROM medication_logs WHERE type='environment'")
     avg_humidity = c.fetchone()[0] or 0
+
     c.execute("""
         SELECT timestamp, temperature, humidity
         FROM medication_logs
@@ -236,6 +233,17 @@ def stats():
         ORDER BY timestamp ASC
     """)
     time_series = c.fetchall()
+
+    # ✅ SOLO STATUS DE environment
+    c.execute("""
+        SELECT status, COUNT(*) 
+        FROM medication_logs 
+        WHERE type = 'environment'
+        GROUP BY status
+    """)
+    status_data = c.fetchall()
+    status_counts = {status: count for status, count in status_data}
+
     conn.close()
 
     return render_template(
@@ -244,7 +252,8 @@ def stats():
         unique_devices=unique_devices,
         avg_temperature=round(avg_temperature, 2),
         avg_humidity=round(avg_humidity, 2),
-        time_series=time_series
+        time_series=time_series,
+        status_counts=status_counts
     )
 
 @app.route("/")

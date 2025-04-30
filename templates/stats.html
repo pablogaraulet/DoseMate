@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stats | DoseMate</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -12,11 +13,9 @@
 
   <main>
     <div class="contact-container fade-in" style="animation-delay: 0.3s;">
-      <!-- Título con animación -->
       <h2 class="fade-down" style="animation-delay: 0.3s;">📈 Statistics</h2>
       <span class="underline"></span>
 
-      <!-- Contenido estadísticas -->
       <div class="fade-up" style="animation-delay: 0.8s;">
         <div class="form-field">
           <label>Total Records:</label>
@@ -26,11 +25,29 @@
           <label>Unique Devices:</label>
           <span>{{ unique_devices }}</span>
         </div>
+        <div class="form-field">
+          <label>Average Temperature (°C):</label>
+          <span>{{ avg_temperature }}</span>
+        </div>
+        <div class="form-field">
+          <label>Average Humidity (%):</label>
+          <span>{{ avg_humidity }}</span>
+        </div>
+      </div>
 
-        <!-- Aquí podrías insertar tus gráficas con Canvas/Chart.js, usando los datos de `logs` -->
-        <!-- Por ejemplo: -->
-        <!-- <canvas id="logChart"></canvas> -->
+      <div class="fade-up" style="animation-delay: 1s; margin-top: 30px;">
+        <h3>Temperature over Time</h3>
+        <canvas id="tempChart"></canvas>
+      </div>
 
+      <div class="fade-up" style="animation-delay: 1.2s; margin-top: 30px;">
+        <h3>Humidity over Time</h3>
+        <canvas id="humChart"></canvas>
+      </div>
+
+      <div class="fade-up" style="animation-delay: 1.4s; margin-top: 30px;">
+        <h3>Status Summary</h3>
+        <canvas id="statusChart"></canvas>
       </div>
     </div>
   </main>
@@ -38,6 +55,51 @@
   <footer>
     <p>&copy; 2025 DoseMate. All rights reserved.</p>
   </footer>
+
+  <script>
+    const timeLabels = {{ time_series | map(attribute=0) | list | tojson }};
+    const tempData = {{ time_series | map(attribute=1) | list | tojson }};
+    const humData = {{ time_series | map(attribute=2) | list | tojson }};
+
+    const statusCounts = {{ status_counts | tojson }};
+
+    new Chart(document.getElementById('tempChart'), {
+      type: 'line',
+      data: {
+        labels: timeLabels,
+        datasets: [{
+          label: 'Temperature (°C)',
+          data: tempData,
+          fill: false,
+          tension: 0.1
+        }]
+      }
+    });
+
+    new Chart(document.getElementById('humChart'), {
+      type: 'line',
+      data: {
+        labels: timeLabels,
+        datasets: [{
+          label: 'Humidity (%)',
+          data: humData,
+          fill: false,
+          tension: 0.1
+        }]
+      }
+    });
+
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: Object.keys(statusCounts),
+        datasets: [{
+          label: 'Status Distribution',
+          data: Object.values(statusCounts),
+        }]
+      }
+    });
+  </script>
 
 </body>
 </html>
