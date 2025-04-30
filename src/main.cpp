@@ -17,7 +17,7 @@ const int button = 33;
 // WiFi
 const char* ssid = "BLVD63";
 const char* password = "sdBLVD63";
-const char* server = "3.144.105.179";
+const char* server = "3.145.80.37";
 const int port = 5000;
 const char* device_id = "ttgo01";
 

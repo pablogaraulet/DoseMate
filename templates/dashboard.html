@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>DoseMate - Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
@@ -12,63 +11,45 @@
   {% include "header.html" %}
 
   <main>
-    <div class="contact-container fade-in" style="animation-delay: 0.3s;">
-      <!-- Título con animación fade-down -->
-      <h2 class="fade-down" style="animation-delay: 0.3s;">📋 All Device Logs</h2>
-      <span class="underline"></span>
+    <h2>📋 All Device Logs</h2>
 
-      <!-- Tabla con animación fade-up -->
-      <div class="fade-up" style="animation-delay: 0.8s;">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Device ID</th>
-              <th>Type</th>
-              <th>Temperature (°C)</th>
-              <th>Humidity (%)</th>
-              <th>Status</th>
-              <th>Timestamp</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in logs %}
-            <tr>
-              <td>{{ row[0] }}</td>
-              <td>{{ row[1] }}</td>
-              <td>{{ row[2] }}</td>
-              <td>
-                {% if row[2] == 'environment' %}
-                  {{ row[3] }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-              <td>
-                {% if row[2] == 'environment' %}
-                  {{ row[4] }}
-                {% else %}
-                  -
-                {% endif %}
-              </td>
-              <td>
-                {% if row[5] == 'optimal' %}
-                  <span style="color: green;">{{ row[5] }}</span>
-                {% elif row[5] == 'regular' %}
-                  <span style="color: orange;">{{ row[5] }}</span>
-                {% elif row[5] == 'danger' %}
-                  <span style="color: red;">{{ row[5] }}</span>
-                {% else %}
-                  {{ row[5] }}
-                {% endif %}
-              </td>
-              <td>{{ row[6] }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Device ID</th>
+          <th>Type</th>
+          <th>Temperature (°C)</th>
+          <th>Humidity (%)</th>
+          <th>Status</th>
+          <th>Timestamp</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in logs %}
+        <tr>
+          <td>{{ row['id'] }}</td>
+          <td>{{ row['device_id'] }}</td>
+          <td>{{ row['type'] }}</td>
+          <td>{{ row['temperature'] if row['temperature'] is not none else '-' }}</td>
+          <td>{{ row['humidity'] if row['humidity'] is not none else '-' }}</td>
+          <td>
+            {% if row['status'] == 'optimal' %}
+              <span style="color: green;">{{ row['status'] }}</span>
+            {% elif row['status'] == 'regular' %}
+              <span style="color: orange;">{{ row['status'] }}</span>
+            {% elif row['status'] == 'danger' %}
+              <span style="color: red;">{{ row['status'] }}</span>
+            {% else %}
+              {{ row['status'] }}
+            {% endif %}
+          </td>
+          <td>{{ row['timestamp'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
   </main>
 
   <footer>

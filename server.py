@@ -1,7 +1,5 @@
 # Flask backend with SQLite database
-# File: server.py
-
-from flask import Flask, request, jsonify, render_template, redirect, url_for, session, flash
+from flask import Flask, request, render_template, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import datetime
@@ -10,32 +8,20 @@ from functools import wraps
 app = Flask(__name__)
 app.secret_key = "cambia_esto_por_una_clave_muy_segura"
 
-# --- Initialize the database (only needed once) ---
 def init_db():
     conn = sqlite3.connect('medication.db')
     c = conn.cursor()
-    # tabla de logs de medicación y ambiente
     c.execute('''
         CREATE TABLE IF NOT EXISTS medication_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             device_id TEXT NOT NULL,
+            type TEXT,
+            temperature REAL,
+            humidity REAL,
             status TEXT NOT NULL,
             timestamp TEXT NOT NULL
         )
     ''')
-    # Aseguramos esquema nuevo en medication_logs
-    meds_cols = {
-        "type":        "TEXT",
-        "temperature": "REAL",
-        "humidity":    "REAL"
-    }
-    for col, col_type in meds_cols.items():
-        try:
-            c.execute(f"ALTER TABLE medication_logs ADD COLUMN {col} {col_type}")
-        except sqlite3.OperationalError:
-            pass  # ya existe
-
-    # tabla de usuarios
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,24 +31,21 @@ def init_db():
             created_at TEXT NOT NULL
         )
     ''')
-    # añadir columnas de perfil si no existen
     profile_cols = {
-        "age":         "INTEGER",
-        "weight":      "REAL",
-        "gender":      "TEXT",
+        "age": "INTEGER",
+        "weight": "REAL",
+        "gender": "TEXT",
         "medications": "TEXT",
-        "allergies":   "TEXT"
+        "allergies": "TEXT"
     }
     for col, col_type in profile_cols.items():
         try:
             c.execute(f"ALTER TABLE users ADD COLUMN {col} {col_type}")
         except sqlite3.OperationalError:
             pass
-
     conn.commit()
     conn.close()
 
-# --- Decorador para rutas protegidas ---
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -72,11 +55,10 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated
 
-# --- Route to receive medication confirmation ---
 @app.route("/medication")
 def receive_medication():
     device_id = request.args.get("device_id", "unknown")
-    status    = request.args.get("status", "unknown")
+    status = request.args.get("status", "unknown")
     timestamp = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
 
     conn = sqlite3.connect('medication.db')
@@ -88,18 +70,16 @@ def receive_medication():
     )
     conn.commit()
     conn.close()
-
     print(f"[LOG] Device {device_id} reported status '{status}' at {timestamp}")
     return f"Received status '{status}' from device {device_id}"
 
-# --- Route to receive environment data ---
 @app.route("/envlog")
 def receive_environment():
-    device_id  = request.args.get("device_id", "unknown")
-    temp       = request.args.get("temperature", type=float)
-    hum        = request.args.get("humidity", type=float)
-    status     = request.args.get("status", "unknown")
-    timestamp  = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
+    device_id = request.args.get("device_id", "unknown")
+    temp = request.args.get("temperature", type=float)
+    hum = request.args.get("humidity", type=float)
+    status = request.args.get("status", "unknown")
+    timestamp = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
 
     conn = sqlite3.connect('medication.db')
     c = conn.cursor()
@@ -110,23 +90,21 @@ def receive_environment():
     )
     conn.commit()
     conn.close()
-
     print(f"[ENV] {device_id} – {temp}°C / {hum}% → {status} at {timestamp}")
     return "Environment data received"
 
-# --- Sign Up ---
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
         username = request.form["username"]
-        email    = request.form["email"]
-        pwd      = request.form["password"]
-        pwd2     = request.form["confirm_password"]
+        email = request.form["email"]
+        pwd = request.form["password"]
+        pwd2 = request.form["confirm_password"]
         if pwd != pwd2:
             flash("Las contraseñas no coinciden", "error")
             return redirect(url_for("signup"))
         hash_pwd = generate_password_hash(pwd)
-        created  = datetime.datetime.utcnow().isoformat()
+        created = datetime.datetime.utcnow().isoformat()
         try:
             conn = sqlite3.connect('medication.db')
             c = conn.cursor()
@@ -143,19 +121,18 @@ def signup():
             return redirect(url_for("signup"))
     return render_template("signup.html")
 
-# --- Log In ---
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
         username = request.form["username"]
-        pwd      = request.form["password"]
+        pwd = request.form["password"]
         conn = sqlite3.connect('medication.db')
         c = conn.cursor()
         c.execute("SELECT id, password_hash FROM users WHERE username = ?", (username,))
         user = c.fetchone()
         conn.close()
         if user and check_password_hash(user[1], pwd):
-            session["user_id"]  = user[0]
+            session["user_id"] = user[0]
             session["username"] = username
             flash(f"¡Bienvenido, {username}!", "success")
             return redirect(url_for("welcome"))
@@ -164,20 +141,17 @@ def login():
             return redirect(url_for("login"))
     return render_template("login.html")
 
-# --- Log Out ---
 @app.route("/logout")
 def logout():
     session.clear()
     flash("Has cerrado sesión.", "info")
     return redirect(url_for("home"))
 
-# --- Landing page tras login ---
 @app.route("/welcome")
 @login_required
 def welcome():
     return render_template("index2.html", username=session.get("username"))
 
-# --- VIEW Profile ---
 @app.route("/profile")
 @login_required
 def profile():
@@ -187,10 +161,9 @@ def profile():
     c.execute("SELECT age, weight, gender, medications, allergies FROM users WHERE id = ?", (uid,))
     row = c.fetchone()
     conn.close()
-    data = {k: (row[i] or "") for i, k in enumerate(["age","weight","gender","medications","allergies"])}
+    data = {k: (row[i] or "") for i, k in enumerate(["age", "weight", "gender", "medications", "allergies"])}
     return render_template("profile.html", edit=False, **data)
 
-# --- EDIT Profile ---
 @app.route("/profile/edit", methods=["GET", "POST"])
 @login_required
 def edit_profile():
@@ -217,21 +190,32 @@ def edit_profile():
     c.execute("SELECT age, weight, gender, medications, allergies FROM users WHERE id = ?", (uid,))
     row = c.fetchone()
     conn.close()
-    data = {k: (row[i] or "") for i, k in enumerate(["age","weight","gender","medications","allergies"])}
+    data = {k: (row[i] or "") for i, k in enumerate(["age", "weight", "gender", "medications", "allergies"])}
     return render_template("profile.html", edit=True, **data)
 
-# --- Dashboard ---
 @app.route("/dashboard")
 @login_required
 def dashboard():
+    # Abrir la conexión y configurar row_factory para tuplas tipo dict
     conn = sqlite3.connect('medication.db')
+    conn.row_factory = sqlite3.Row
     c = conn.cursor()
-    c.execute("SELECT * FROM medication_logs ORDER BY timestamp DESC")
+    c.execute("""
+        SELECT
+            id,
+            device_id,
+            type,
+            temperature,
+            humidity,
+            status,
+            timestamp
+        FROM medication_logs
+        ORDER BY timestamp DESC
+    """)
     rows = c.fetchall()
     conn.close()
     return render_template("dashboard.html", logs=rows)
 
-# --- Stats ---
 @app.route("/stats")
 @login_required
 def stats():
@@ -258,12 +242,11 @@ def stats():
         "stats.html",
         total_records=total_records,
         unique_devices=unique_devices,
-        avg_temperature=round(avg_temperature,2),
-        avg_humidity=round(avg_humidity,2),
+        avg_temperature=round(avg_temperature, 2),
+        avg_humidity=round(avg_humidity, 2),
         time_series=time_series
     )
 
-# --- Home y Contact ---
 @app.route("/")
 def home():
     return render_template("index.html")
