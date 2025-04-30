@@ -3,6 +3,7 @@ from flask import Flask, request, render_template, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 import sqlite3
 import datetime
+from zoneinfo import ZoneInfo
 from functools import wraps
 
 app = Flask(__name__)
@@ -59,7 +60,8 @@ def login_required(f):
 def receive_medication():
     device_id = request.args.get("device_id", "unknown")
     status = request.args.get("status", "unknown")
-    timestamp = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
+    # timestamp local en PDT
+    timestamp = datetime.datetime.now(ZoneInfo("America/Los_Angeles")).isoformat()
 
     conn = sqlite3.connect('medication.db')
     c = conn.cursor()
@@ -79,7 +81,8 @@ def receive_environment():
     temp = request.args.get("temperature", type=float)
     hum = request.args.get("humidity", type=float)
     status = request.args.get("status", "unknown")
-    timestamp = request.args.get("timestamp", datetime.datetime.utcnow().isoformat())
+    # timestamp local en PDT
+    timestamp = datetime.datetime.now(ZoneInfo("America/Los_Angeles")).isoformat()
 
     conn = sqlite3.connect('medication.db')
     c = conn.cursor()
@@ -234,10 +237,9 @@ def stats():
     """)
     time_series = c.fetchall()
 
-    # ✅ SOLO STATUS DE environment
     c.execute("""
-        SELECT status, COUNT(*) 
-        FROM medication_logs 
+        SELECT status, COUNT(*)
+        FROM medication_logs
         WHERE type = 'environment'
         GROUP BY status
     """)
