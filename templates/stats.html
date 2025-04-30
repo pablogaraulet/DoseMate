@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Stats | DoseMate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+  {% include "header.html" %}
+
+  <main>
+    <div class="contact-container fade-in" style="animation-delay: 0.3s;">
+      <!-- Título con animación -->
+      <h2 class="fade-down" style="animation-delay: 0.3s;">📈 Statistics</h2>
+      <span class="underline"></span>
+
+      <!-- Contenido estadísticas -->
+      <div class="fade-up" style="animation-delay: 0.8s;">
+        <div class="form-field">
+          <label>Total Records:</label>
+          <span>{{ total_records }}</span>
+        </div>
+        <div class="form-field">
+          <label>Unique Devices:</label>
+          <span>{{ unique_devices }}</span>
+        </div>
+
+        <!-- Aquí podrías insertar tus gráficas con Canvas/Chart.js, usando los datos de `logs` -->
+        <!-- Por ejemplo: -->
+        <!-- <canvas id="logChart"></canvas> -->
+
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>&copy; 2025 DoseMate. All rights reserved.</p>
+  </footer>
+
+</body>
+</html>

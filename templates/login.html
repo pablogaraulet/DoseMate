@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Log In | DoseMate</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  
+  {% include "header.html" %}
+
+  <main>
+    <div class="contact-container fade-in" style="animation-delay: 0.3s;">
+      <!-- Título "Sign In" con efecto fade-down -->
+      <h2 class="fade-down" style="animation-delay: 0.3s;">Log In</h2>
+      <span class="underline"></span>
+
+      <!-- Formulario de login con efecto fade-up -->
+      <div class="fade-up" style="animation-delay: 0.8s;">
+        <!-- Mostrar mensajes de flash -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, message in messages %}
+            <p class="flash {{ category }}" style="margin-bottom: 1rem;">{{ message }}</p>
+          {% endfor %}
+        {% endwith %}
+
+        <form class="contact-form" id="loginForm" method="post">
+          <!-- Username -->
+          <div class="form-field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+          </div>
+
+          <!-- Password -->
+          <div class="form-field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+          </div>
+
+          <div class="btn-container">
+            <button type="submit" class="button-cv" style="color: #fff;">
+              Log In
+              <span class="arrow">↗</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>
