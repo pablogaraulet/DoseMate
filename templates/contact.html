@@ -10,7 +10,7 @@
   <script type="text/javascript" src="https://cdn.emailjs.com/dist/email.min.js"></script>
   <script type="text/javascript">
     (function() {
-      // Inicializa EmailJS con tu Public Key
+      // Initialize EmailJS 
       emailjs.init("FsfOgUsz9UhgOsVjA");
     })();
   </script>
@@ -21,16 +21,16 @@
 
   <main>
     <div class="contact-container fade-in" style="animation-delay: 0.3s;">
-      <!-- Título "Contact" con efecto fade-down -->
+      <!-- "Contact" title  -->
       <h2 class="fade-down" style="animation-delay: 0.3s;">Contact</h2>
       <span class="underline"></span>
 
-      <!-- Bloque de "Message Us" y formulario con efecto fade-up -->
+      <!-- Message Us block and form  -->
       <div class="fade-up" style="animation-delay: 0.8s;">
         <h3>Message Us!</h3>
         
         <form class="contact-form" id="contactForm">
-          <!-- Agrupar Name y Email en una sola fila -->
+          <!-- Group Name and Email  -->
           <div class="input-row">
             <div class="form-field">
               <label for="name">Name</label>
@@ -59,7 +59,7 @@
             </button>
           </div>
 
-          <!-- Mensaje de éxito / error -->
+          <!-- Success / error message -->
           <p id="successMessage" style="margin-top:10px; font-size:1rem;"></p>
         </form>
       </div>
@@ -72,13 +72,13 @@
       const successMsg = document.getElementById('successMessage');
 
       form.addEventListener('submit', function(event) {
-        event.preventDefault(); // evita recargar la página
+        event.preventDefault(); // prevent page reload
         
         emailjs.sendForm(
-          'service_b7ul49e',   // tu service_id
-          'template_ex32fam',  // tu template_id
-          this,                // el propio formulario
-          'FsfOgUsz9UhgOsVjA'   // tu public_key
+          'service_b7ul49e',   
+          'template_ex32fam',  
+          this,                
+          'FsfOgUsz9UhgOsVjA'   
         ).then(function() {
             successMsg.textContent = 'Message sent successfully!';
             successMsg.style.color = '#3ec1ec';

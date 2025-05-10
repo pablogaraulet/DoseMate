@@ -17,7 +17,7 @@ const int button    = 33;
 // WiFi
 const char *ssid      = "BLVD63";
 const char *password  = "sdBLVD63";
-const char *server    = "3.147.68.157";
+const char *server    = "18.227.105.20";
 const int   port      = 5000;
 const char *device_id = "ttgo01";
 
@@ -31,16 +31,16 @@ bool alertActive      = false;
 bool confirmationDone = false;
 
 unsigned long startTime;
-// <-- reducido a 2 segundos para pruebas rápidas
-const unsigned long alertDelay = 2000;
-unsigned long lastNotification = 0;
-unsigned long lastBlink        = 0;
-bool blinkState                = false;
+const unsigned long alertDelay     = 2000;
+unsigned long lastNotification     = 0;
+unsigned long lastBlink            = 0;
+bool blinkState                    = false;
+int  notifyCount                   = 0;
 
 Adafruit_AHTX0 aht;
 TFT_eSPI     tft = TFT_eSPI();
 
-// -- Helper to draw text on display --
+// Helper to draw text on display
 void fadeScreen() {
   tft.fillScreen(TFT_BLACK);
 }
@@ -48,11 +48,9 @@ void showMessage(const String &text, uint16_t color = TFT_WHITE, uint8_t size = 
   fadeScreen();
   tft.setTextColor(color, TFT_BLACK);
   tft.setTextSize(size);
-  int textWidth  = text.length() * 6 * size;
-  int textHeight = 8 * size;
-  int x = (tft.width() - textWidth) / 2;
-  int y = (tft.height() - textHeight) / 2;
-  tft.setCursor(x, y);
+  int w = text.length() * 6 * size;
+  int h = 8 * size;
+  tft.setCursor((tft.width() - w) / 2, (tft.height() - h) / 2);
   tft.println(text);
 }
 void showTemporaryMessage(const String &text, uint16_t color, uint8_t size, unsigned long duration) {
@@ -61,13 +59,23 @@ void showTemporaryMessage(const String &text, uint16_t color, uint8_t size, unsi
   fadeScreen();
 }
 
-// -- BLE callbacks --
+// BLE Server callbacks
 class MyServerCallbacks : public NimBLEServerCallbacks {
-  void onConnect(NimBLEServer *pServer)    { bleConnected = true;  Serial.println("BLE device connected"); }
-  void onDisconnect(NimBLEServer *pServer) { bleConnected = false; Serial.println("BLE device disconnected"); }
+  void onConnect(NimBLEServer* pServer) {
+    bleConnected = true;
+    Serial.println("BLE device connected");
+    // send initial notification immediately upon connection
+    pCharacteristic->setValue("Time to take your medication! #0");
+    pCharacteristic->notify();
+    notifyCount = 1;
+  }
+  void onDisconnect(NimBLEServer* pServer) {
+    bleConnected = false;
+    Serial.println("BLE device disconnected");
+  }
 };
 
-// -- WiFi + NTP setup --
+// WiFi + NTP setup
 void connectWiFi() {
   Serial.println("Connecting to WiFi...");
   WiFi.begin(ssid, password);
@@ -77,19 +85,17 @@ void connectWiFi() {
     Serial.print(".");
   }
   if (WiFi.status() == WL_CONNECTED) {
-    Serial.println("\nWiFi connected");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
+    Serial.println("\nWiFi connected, IP: " + WiFi.localIP().toString());
     setenv("TZ", "PDT7PDT,M3.2.0,M11.1.0", 1);
     tzset();
     configTime(0, 0, "pool.ntp.org");
-    struct tm timeinfo;
+    struct tm ti;
     Serial.println("Waiting for NTP sync...");
-    while (!getLocalTime(&timeinfo)) {
-      Serial.println("Failed to sync time...");
-      delay(1000);
+    while (!getLocalTime(&ti)) {
+      Serial.print(".");
+      delay(500);
     }
-    Serial.println("Time synchronized");
+    Serial.println("\nTime synchronized");
   } else {
     Serial.println("\nWiFi failed; retrying...");
     delay(2000);
@@ -97,7 +103,7 @@ void connectWiFi() {
   }
 }
 
-// -- Environment evaluation + upload --
+// Environment evaluation + upload
 String evaluateEnvironment(float temp, float hum) {
   if (temp >= 18 && temp <= 25 && hum >= 40 && hum <= 55) return "optimal";
   if ((temp >= 10 && temp < 18) || (temp > 25 && temp <= 30) ||
@@ -107,14 +113,14 @@ String evaluateEnvironment(float temp, float hum) {
 void sendEnvironmentLog(float temp, float hum, String status) {
   WiFiClient wifi;
   HttpClient client(wifi);
-  char timeString[30];
+  char ts[30];
   time_t now = time(nullptr);
-  strftime(timeString, sizeof(timeString), "%Y-%m-%dT%H:%M:%SZ", localtime(&now));
+  strftime(ts, sizeof(ts), "%Y-%m-%dT%H:%M:%SZ", localtime(&now));
   String path = String("/envlog?device_id=") + device_id +
                 "&temperature=" + String(temp,1) +
                 "&humidity="    + String(hum,1) +
                 "&status="      + status +
-                "&timestamp="   + timeString;
+                "&timestamp="   + ts;
   Serial.println("Uploading data...");
   int err = client.get(server, port, path.c_str());
   Serial.println(err == 0 ? "Upload OK" : "Upload Error");
@@ -124,6 +130,7 @@ void sendEnvironmentLog(float temp, float hum, String status) {
 void setup() {
   Serial.begin(115200);
 
+  // initialize LEDs, buzzer, button
   pinMode(ledRed,    OUTPUT);
   pinMode(ledYellow, OUTPUT);
   pinMode(ledGreen,  OUTPUT);
@@ -140,21 +147,23 @@ void setup() {
   EEPROM.begin(512);
   startTime = millis();
 
+  // WiFi + NTP
   connectWiFi();
 
+  // display init
   Wire.begin(21, 22);
   delay(200);
-
   tft.init();
   tft.setRotation(1);
   showMessage("DoseMate Ready!", TFT_GREEN, 3);
 
+  // sensor init
   if (!aht.begin()) {
     showMessage("Sensor Error!", TFT_RED, 2);
     while (1) delay(10);
   }
 
-  // --- BLE setup ---
+  // BLE setup 
   NimBLEDevice::init("DoseMate");
   NimBLEServer *pServer = NimBLEDevice::createServer();
   pServer->setCallbacks(new MyServerCallbacks());
@@ -164,10 +173,11 @@ void setup() {
     CHARACTERISTIC_UUID,
     NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::NOTIFY
   );
+
+  
   pCharacteristic->setValue("Ready");
   pService->start();
 
-  // Advertise our service UUID so mobiles can see it immediately
   NimBLEAdvertising *pAdv = NimBLEDevice::getAdvertising();
   pAdv->addServiceUUID(SERVICE_UUID);
   pAdv->start();
@@ -177,10 +187,12 @@ void setup() {
 void loop() {
   unsigned long now = millis();
 
+  // after alertDelay, activate alert
   if (!alertActive && !confirmationDone && now - startTime >= alertDelay) {
     alertActive = true;
-    lastNotification = 0;
-    // buzzer & lights
+    lastNotification = now;
+
+    // visual + buzzer alert
     digitalWrite(ledRed, LOW);
     digitalWrite(ledYellow, HIGH);
     ledcWriteTone(0, 2000);
@@ -191,6 +203,7 @@ void loop() {
   }
 
   if (alertActive && !confirmationDone) {
+    // blink message on screen
     if (now - lastBlink >= 600) {
       blinkState = !blinkState;
       if (blinkState) showMessage("Meds Time!", TFT_YELLOW, 2);
@@ -198,33 +211,41 @@ void loop() {
       lastBlink = now;
     }
 
+    // periodic BLE notify every 5s
     if (bleConnected && now - lastNotification >= 5000) {
-      pCharacteristic->setValue("Time to take your medication!");
+      String msg = "Time to take your medication! #" + String(++notifyCount);
+      Serial.println("Periodic notify: " + msg);
+      pCharacteristic->setValue(msg.c_str());
       pCharacteristic->notify();
       lastNotification = now;
     }
 
+    // on button press, confirm
     if (digitalRead(button) == LOW) {
       delay(200);
       confirmationDone = true;
       digitalWrite(ledYellow, LOW);
-      digitalWrite(ledGreen, HIGH);
+      digitalWrite(ledGreen,  HIGH);
       ledcWriteTone(0, 0);
 
       showTemporaryMessage("Meds Taken!", TFT_GREEN, 2, 1500);
       showTemporaryMessage("Well done!", TFT_GREEN, 2, 2000);
 
       if (bleConnected) {
-        pCharacteristic->setValue("Medication confirmed");
+        String msg = "Medication confirmed #" + String(++notifyCount);
+        Serial.println("Confirm notify: " + msg);
+        pCharacteristic->setValue(msg.c_str());
         pCharacteristic->notify();
       }
 
       sensors_event_t humidity, temp;
       aht.getEvent(&humidity, &temp);
       if (!isnan(temp.temperature) && !isnan(humidity.relative_humidity)) {
-        sendEnvironmentLog(temp.temperature,
-                           humidity.relative_humidity,
-                           evaluateEnvironment(temp.temperature, humidity.relative_humidity));
+        sendEnvironmentLog(
+          temp.temperature,
+          humidity.relative_humidity,
+          evaluateEnvironment(temp.temperature, humidity.relative_humidity)
+        );
       }
     }
   }

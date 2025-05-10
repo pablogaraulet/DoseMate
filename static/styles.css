@@ -2,12 +2,12 @@ body {
   font-family: 'Poppins', sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #ffffff;  /* Fondo blanco */
+  background-color: #ffffff;  
   color: #333;
 }
 
 header {
-  background-color: #add8e6;  /* Azul claro */
+  background-color: #add8e6;  
   padding: 10px 20px;
   color: white;
   display: flex;
@@ -15,7 +15,7 @@ header {
   justify-content: space-between;
 }
 
-/* Resto de estilos sin cambios */
+
 nav a {
   color: white;
   text-decoration: none;
@@ -25,16 +25,16 @@ nav a {
 
 main {
   padding: 40px;
-  text-align: center;  /* Centra el contenido de main */
+  text-align: center;  
 }
 
 main h2 {
-  font-size: 48px;  /* Título grande para Welcome */
+  font-size: 48px;  
   margin-bottom: 20px;
 }
 
 main p {
-  font-size: 18px;  /* Texto descriptivo más pequeño */
+  font-size: 18px;  
   margin-bottom: 20px;
 }
 
@@ -83,7 +83,7 @@ th {
   animation: fadeIn 1.5s ease-out forwards;
 }
 
-/* INDEX PAGE*/
+/* INDEX PAGE */
 .hidden {
   opacity: 0;
   transform: translateY(20px);
@@ -95,11 +95,11 @@ th {
   transform: translateY(0);
 }
 
-/* Sección inicial con background visible solo al cargar la página */
+/* Initial section  */
 .hero-bg {
-  background: url('{{ url_for("static", filename="https://media.istockphoto.com/id/184377448/es/foto/medicamentos-comprimidos.jpg?s=612x612&w=0&k=20&c=12SmngVfVedu_V5XUmtirtVDML_Z4dS-hASEynzWcW8=") }}') no-repeat center center;
+  background: url('{{ url_for("static", filename="...") }}') no-repeat center center;
   background-size: cover;
-  height: 100vh;  /* Ocupa el 100% del viewport */
+  height: 100vh;  
 }
 
 
@@ -148,7 +148,7 @@ th {
   font-family: 'Poppins', sans-serif;
 }
 
-/* Formulario de contacto */
+/* Contact form */
 .contact-form {
   display: flex;
   flex-direction: column;
@@ -190,7 +190,7 @@ th {
   border-bottom-color: #3ec1ec;
 }
 
-/* Botón de envío */
+/* Submit button */
 .btn-container {
   text-align: center;
   margin-top: 20px;
@@ -203,7 +203,7 @@ th {
   background-color: #3ec1ec;
   color: #ffffff;
   border: none;
-  border-radius: 9999px; /* Forma de píldora */
+  border-radius: 9999px; 
   padding: 12px 20px;
   font-size: 1rem;
   font-weight: 600;

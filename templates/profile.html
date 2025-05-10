@@ -18,7 +18,7 @@
 
       <div class="fade-up" style="animation-delay: 0.8s;">
         {% if not edit %}
-          <!-- Tabla con datos -->
+          <!-- Data table -->
           <table class="profile-table">
             <tr><th>Age</th>         <td>{{ age }}</td></tr>
             <tr><th>Weight (kg)</th> <td>{{ weight }}</td></tr>
@@ -38,7 +38,7 @@
             </a>
           </div>
         {% else %}
-          <!-- Formulario de edición -->
+          <!-- Edit form -->
           <form class="contact-form" id="profileForm" method="post">
             <div class="input-row">
               <div class="form-field">
@@ -51,13 +51,13 @@
               </div>
             </div>
 
-            <!-- Gender como campo de texto -->
+            <!-- Gender -->
             <div class="form-field">
               <label for="gender">Gender</label>
               <input type="text" id="gender" name="gender" value="{{ gender }}" placeholder="e.g. Male, Female, Other" required>
             </div>
 
-            <!-- Medicaciones con formato indicado -->
+            <!-- Medications -->
             <div class="form-field">
               <label for="medications">
                 Medications <br/>

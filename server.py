@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 from functools import wraps
 
 app = Flask(__name__)
-app.secret_key = "cambia_esto_por_una_clave_muy_segura"
+app.secret_key = "pablo2003"  
 
 def init_db():
     conn = sqlite3.connect('medication.db')
@@ -51,7 +51,7 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if "user_id" not in session:
-            flash("Tienes que iniciar sesión primero", "error")
+            flash("You must log in first", "error")
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated
@@ -60,7 +60,7 @@ def login_required(f):
 def receive_medication():
     device_id = request.args.get("device_id", "unknown")
     status = request.args.get("status", "unknown")
-    # timestamp local en PDT
+    # local timestamp in PDT
     timestamp = datetime.datetime.now(ZoneInfo("America/Los_Angeles")).isoformat()
 
     conn = sqlite3.connect('medication.db')
@@ -81,7 +81,7 @@ def receive_environment():
     temp = request.args.get("temperature", type=float)
     hum = request.args.get("humidity", type=float)
     status = request.args.get("status", "unknown")
-    # timestamp local en PDT
+    # local timestamp in PDT
     timestamp = datetime.datetime.now(ZoneInfo("America/Los_Angeles")).isoformat()
 
     conn = sqlite3.connect('medication.db')
@@ -104,7 +104,7 @@ def signup():
         pwd = request.form["password"]
         pwd2 = request.form["confirm_password"]
         if pwd != pwd2:
-            flash("Las contraseñas no coinciden", "error")
+            flash("Passwords do not match", "error")
             return redirect(url_for("signup"))
         hash_pwd = generate_password_hash(pwd)
         created = datetime.datetime.utcnow().isoformat()
@@ -117,10 +117,10 @@ def signup():
             )
             conn.commit()
             conn.close()
-            flash("Usuario creado correctamente. Ya puedes iniciar sesión.", "success")
+            flash("User created successfully. You can now log in.", "success")
             return redirect(url_for("login"))
         except sqlite3.IntegrityError:
-            flash("El usuario o email ya existe.", "error")
+            flash("Username or email already exists.", "error")
             return redirect(url_for("signup"))
     return render_template("signup.html")
 
@@ -137,17 +137,17 @@ def login():
         if user and check_password_hash(user[1], pwd):
             session["user_id"] = user[0]
             session["username"] = username
-            flash(f"¡Bienvenido, {username}!", "success")
+            flash(f"Welcome, {username}!", "success")
             return redirect(url_for("welcome"))
         else:
-            flash("Usuario o contraseña incorrectos", "error")
+            flash("Incorrect username or password", "error")
             return redirect(url_for("login"))
     return render_template("login.html")
 
 @app.route("/logout")
 def logout():
     session.clear()
-    flash("Has cerrado sesión.", "info")
+    flash("You have been logged out.", "info")
     return redirect(url_for("home"))
 
 @app.route("/welcome")

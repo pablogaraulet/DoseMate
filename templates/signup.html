@@ -12,13 +12,13 @@
 
   <main>
     <div class="contact-container fade-in" style="animation-delay: 0.3s;">
-      <!-- Título "Sign Up" con efecto fade-down -->
+      <!-- Sign Up title -->
       <h2 class="fade-down" style="animation-delay: 0.3s;">Sign Up</h2>
       <span class="underline"></span>
 
-      <!-- Formulario de registro con efecto fade-up -->
+      <!-- Registration form  -->
       <div class="fade-up" style="animation-delay: 0.8s;">
-        <!-- Mostrar mensajes de flash -->
+        <!-- Display messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% for category, message in messages %}
             <p class="flash {{ category }}" style="margin-bottom: 1rem;">{{ message }}</p>

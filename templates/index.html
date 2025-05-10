@@ -10,7 +10,6 @@
 
   {% include "header.html" %}
   
-  <!-- Espaciador entre header y main -->
   <div style="height: 50px;"></div>
 
   <main>
@@ -19,14 +18,14 @@
       Your smart medication assistant. Monitor, notify and confirm doses for your loved ones easily.
     </p>
     
-    <!-- Sección de botones de autenticación -->
+    <!-- Authentication buttons section -->
     <div class="auth-buttons fade-in" style="display: flex; justify-content: center; gap: 20px; margin-top: 50px; animation-delay: 1.2s;">
       <a href="/signup" class="button-cv" style="color: #fff; text-decoration: none;">Sign In</a>
       <a href="/login" class="button-cv" style="color: #fff; text-decoration: none;">Log In</a>
     </div>
   </main>
 
-  <!-- Sección About Us - inicialmente oculta y posicionada con espacio superior -->
+  <!-- About Us section  -->
   <section id="about-us-section" class="hidden" style="padding: 40px; margin-top: 20vh;">
     <h2 style="text-align: center;">About Us</h2>
     <p style="text-align: justify;">
@@ -41,7 +40,7 @@
     &copy; 2025 DoseMate. All rights reserved.
   </footer>
 
-  <!-- Script para mostrar la sección About Us al hacer scroll -->
+  <!-- Script to show the About Us section on scroll -->
   <script>
     document.addEventListener("DOMContentLoaded", function() {
       var aboutSection = document.getElementById("about-us-section");
